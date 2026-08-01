@@ -11,7 +11,12 @@ import { SettingsSummary } from "@/components/settings-summary";
 import { EncodeProgress } from "@/components/encode-progress";
 import { ResultCard } from "@/components/result-card";
 import { VideoPreview } from "@/components/video-preview";
-import { QueueRow, type QueueItem } from "@/components/queue-row";
+import { QueueRow, type ItemStatus, type QueueItem } from "@/components/queue-row";
+
+type ServerState = {
+  uploads: UploadInfo[];
+  jobs: ({ uploadId: string } & JobStatus)[];
+};
 
 function uploadFile(
   file: File,
@@ -92,10 +97,101 @@ export default function Home() {
   const removeItem = useCallback((key: string) => {
     setItems((prev) => {
       const it = prev.find((x) => x.key === key);
-      if (it?.previewUrl) URL.revokeObjectURL(it.previewUrl);
+      if (it?.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(it.previewUrl);
       return prev.filter((x) => x.key !== key);
     });
   }, []);
+
+  // Follow a job this client didn't start (rehydrated after a reload).
+  const watchJob = useCallback(
+    async (key: string, jobId: string) => {
+      setRunning(true);
+      cancelRef.current = false;
+      while (true) {
+        await sleep(500);
+        if (cancelRef.current) {
+          await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+          patch(key, { status: "ready", job: null, jobId: null });
+          break;
+        }
+        const res = await fetch(`/api/jobs/${jobId}`);
+        if (res.status === 404) {
+          patch(key, { status: "ready", job: null, jobId: null });
+          break;
+        }
+        if (!res.ok) continue;
+        const status = (await res.json()) as JobStatus;
+        if (status.state === "cancelled") {
+          patch(key, { status: "ready", job: null, jobId: null });
+          break;
+        }
+        if (status.state === "done") {
+          patch(key, { status: "done", job: status });
+          break;
+        }
+        if (status.state === "error") {
+          patch(key, {
+            status: "error",
+            error: status.error ?? "Encode failed",
+            job: null,
+          });
+          break;
+        }
+        patch(key, { job: status });
+      }
+      setRunning(false);
+    },
+    [patch],
+  );
+
+  // Rehydrate from the server after a reload: uploads live on disk, jobs in
+  // the server store, and a running ffmpeg keeps encoding regardless of us.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+    let aborted = false;
+    void (async () => {
+      const res = await fetch("/api/state").catch(() => null);
+      if (!res?.ok || aborted) return;
+      const state = (await res.json()) as ServerState;
+      if (state.uploads.length === 0) return;
+
+      const latestJob = new Map<string, { uploadId: string } & JobStatus>();
+      for (const j of state.jobs) latestJob.set(j.uploadId, j);
+
+      const restored: QueueItem[] = state.uploads.map((up) => {
+        const j = latestJob.get(up.id);
+        const status: ItemStatus =
+          j?.state === "encoding"
+            ? "encoding"
+            : j?.state === "done"
+              ? "done"
+              : j?.state === "error"
+                ? "error"
+                : "ready";
+        return {
+          key: up.id,
+          name: up.name,
+          size: up.size,
+          previewUrl: `/api/upload/${up.id}/file`,
+          uploadPct: 1,
+          upload: up,
+          status,
+          jobId: j && j.state !== "cancelled" ? j.id : null,
+          job: j && (j.state === "done" || j.state === "encoding") ? j : null,
+          error: j?.state === "error" ? j.error : null,
+        };
+      });
+
+      setItems((prev) => (prev.length === 0 ? restored : prev));
+      const active = restored.find((it) => it.status === "encoding");
+      if (active?.jobId) void watchJob(active.key, active.jobId);
+    })();
+    return () => {
+      aborted = true;
+    };
+  }, [watchJob]);
 
   // Window-wide drag & drop, any time.
   useEffect(() => {
@@ -339,7 +435,7 @@ export default function Home() {
 
       {items.length > 1 && (
         <div>
-          <div>
+          <div className="-mx-2 max-h-[45vh] overflow-y-auto overscroll-contain px-2">
             {items.map((it) => (
               <QueueRow
                 key={it.key}

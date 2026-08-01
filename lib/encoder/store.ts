@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import type { EncodeSettings, SourceMeta } from "./types";
+import type { EncodeSettings, JobStatus, SourceMeta } from "./types";
 
 export type Upload = {
   id: string;
@@ -35,3 +35,16 @@ const g = globalThis as unknown as {
 
 export const uploads: Map<string, Upload> = (g.__mp4encUploads ??= new Map());
 export const jobs: Map<string, Job> = (g.__mp4encJobs ??= new Map());
+
+export function jobStatus(job: Job): JobStatus {
+  return {
+    id: job.id,
+    state: job.state,
+    progress: job.progress,
+    fps: job.fps,
+    speed: job.speed,
+    outputSize: job.outputSize,
+    elapsedMs: (job.finishedAt ?? Date.now()) - job.startedAt,
+    error: job.error,
+  };
+}

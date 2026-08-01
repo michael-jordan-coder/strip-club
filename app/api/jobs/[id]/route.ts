@@ -1,5 +1,4 @@
-import { jobs } from "@/lib/encoder/store";
-import type { JobStatus } from "@/lib/encoder/types";
+import { jobs, jobStatus } from "@/lib/encoder/store";
 
 export async function GET(
   _request: Request,
@@ -10,18 +9,7 @@ export async function GET(
   if (!job) {
     return Response.json({ error: "Job not found" }, { status: 404 });
   }
-
-  const status: JobStatus = {
-    id: job.id,
-    state: job.state,
-    progress: job.progress,
-    fps: job.fps,
-    speed: job.speed,
-    outputSize: job.outputSize,
-    elapsedMs: (job.finishedAt ?? Date.now()) - job.startedAt,
-    error: job.error,
-  };
-  return Response.json(status);
+  return Response.json(jobStatus(job));
 }
 
 export async function DELETE(

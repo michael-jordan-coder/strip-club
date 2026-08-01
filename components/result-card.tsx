@@ -18,7 +18,7 @@ export function ResultCard({ job, upload, onAdjust, onReset }: Props) {
   const delta = ((outSize - upload.size) / upload.size) * 100;
 
   return (
-    <div>
+    <div className="rise-in">
       <p className="font-mono text-xs text-zinc-500">
         {formatBytes(upload.size)} → {formatBytes(outSize)}{" "}
         <span className="text-zinc-300">

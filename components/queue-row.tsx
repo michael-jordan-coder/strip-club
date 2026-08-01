@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { JobStatus, UploadInfo } from "@/lib/encoder/types";
 import { formatBytes, formatDuration } from "@/lib/format";
+import { AnimatedPercent, ProgressBar } from "./progress-bar";
 import { SaveDialog } from "./save-dialog";
 import { VideoPreview } from "./video-preview";
 
@@ -54,14 +55,14 @@ function Status({ item }: { item: QueueItem }) {
   if (item.status === "encoding") {
     return (
       <span className="font-mono text-xs tabular-nums text-zinc-200">
-        {Math.floor((item.job?.progress ?? 0) * 100)}%
+        <AnimatedPercent progress={item.job?.progress ?? 0} />%
       </span>
     );
   }
   if (item.status === "done" && item.job?.outputSize != null) {
     const delta = Math.round(((item.job.outputSize - item.size) / item.size) * 100);
     return (
-      <span className="font-mono text-xs text-zinc-300">
+      <span className="rise-in font-mono text-xs text-zinc-300">
         {delta <= 0 ? "−" : "+"}
         {Math.abs(delta)}%
       </span>
@@ -127,7 +128,7 @@ export function QueueRow({ item, locked, expanded, onToggle, onRemove }: Props) 
                 e.stopPropagation();
                 setSaving(true);
               }}
-              className="text-zinc-400 transition-colors duration-150 hover:text-zinc-100"
+              className="rise-in text-zinc-400 transition-colors duration-150 hover:text-zinc-100"
             >
               <svg
                 width="14"
@@ -171,6 +172,11 @@ export function QueueRow({ item, locked, expanded, onToggle, onRemove }: Props) 
           )}
         </div>
       </div>
+      {item.status === "encoding" && (
+        <div className="mb-3 mt-1 px-0.5">
+          <ProgressBar progress={item.job?.progress ?? 0} />
+        </div>
+      )}
       {item.jobId && (
         <SaveDialog
           open={saving}
