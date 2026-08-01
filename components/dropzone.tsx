@@ -3,11 +3,11 @@
 import { useRef } from "react";
 
 type Props = {
-  onFile: (file: File) => void;
+  onFiles: (files: File[]) => void;
 };
 
 /** Click-to-browse surface; drag & drop is handled window-wide by the page. */
-export function Dropzone({ onFile }: Props) {
+export function Dropzone({ onFiles }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -31,16 +31,17 @@ export function Dropzone({ onFile }: Props) {
         <path d="M12 16V4m0 0 4 4m-4-4-4 4" />
         <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
       </svg>
-      <span className="text-sm text-zinc-300">Drop a video</span>
+      <span className="text-sm text-zinc-300">Drop videos</span>
       <span className="text-xs text-zinc-600">or browse</span>
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept="video/*,.mkv,.avi,.mov,.webm,.m4v,.mts,.m2ts,.ts,.flv,.wmv,.mpg,.mpeg,.3gp,.ogv"
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length > 0) onFiles(files);
           e.target.value = "";
         }}
       />
