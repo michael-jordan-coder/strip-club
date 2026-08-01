@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { JobStatus, SourceMeta, UploadInfo } from "@/lib/encoder/types";
 import { defaultSettings } from "@/lib/encoder/types";
+import { AddFiles } from "@/components/add-files";
 import { Dropzone } from "@/components/dropzone";
 import { SourceCard } from "@/components/source-card";
 import { SettingsForm } from "@/components/settings-form";
@@ -53,6 +54,7 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const cancelRef = useRef(false);
   const [winDrag, setWinDrag] = useState(false);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const patch = useCallback((key: string, p: Partial<QueueItem>) => {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...p } : it)));
@@ -306,6 +308,10 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="mt-4">
+              <AddFiles onFiles={addFiles} />
+            </div>
+
             {(single.status === "encoding" || single.status === "queued") && (
               <div className="mt-8">
                 {single.job ? (
@@ -339,9 +345,17 @@ export default function Home() {
                 key={it.key}
                 item={it}
                 locked={it.status === "encoding" || (running && it.status === "queued")}
+                expanded={expandedKey === it.key}
+                onToggle={() =>
+                  setExpandedKey((k) => (k === it.key ? null : it.key))
+                }
                 onRemove={() => removeItem(it.key)}
               />
             ))}
+          </div>
+
+          <div className="mt-2">
+            <AddFiles onFiles={addFiles} />
           </div>
 
           {readyCount > 0 && aggMeta && (

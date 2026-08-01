@@ -2,6 +2,9 @@
 
 import { useRef } from "react";
 
+export const VIDEO_ACCEPT =
+  "video/*,.mkv,.avi,.mov,.webm,.m4v,.mts,.m2ts,.ts,.flv,.wmv,.mpg,.mpeg,.3gp,.ogv";
+
 type Props = {
   onFiles: (files: File[]) => void;
 };
@@ -37,7 +40,7 @@ export function Dropzone({ onFiles }: Props) {
         ref={inputRef}
         type="file"
         multiple
-        accept="video/*,.mkv,.avi,.mov,.webm,.m4v,.mts,.m2ts,.ts,.flv,.wmv,.mpg,.mpeg,.3gp,.ogv"
+        accept={VIDEO_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);

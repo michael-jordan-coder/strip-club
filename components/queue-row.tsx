@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { JobStatus, UploadInfo } from "@/lib/encoder/types";
 import { formatBytes, formatDuration } from "@/lib/format";
+import { SaveDialog } from "./save-dialog";
+import { VideoPreview } from "./video-preview";
 
 export type ItemStatus =
   | "uploading"
@@ -59,32 +61,10 @@ function Status({ item }: { item: QueueItem }) {
   if (item.status === "done" && item.job?.outputSize != null) {
     const delta = Math.round(((item.job.outputSize - item.size) / item.size) * 100);
     return (
-      <>
-        <span className="font-mono text-xs text-zinc-300">
-          {delta <= 0 ? "−" : "+"}
-          {Math.abs(delta)}%
-        </span>
-        <a
-          href={`/api/jobs/${item.jobId}/download`}
-          aria-label="Download"
-          className="text-zinc-400 transition-colors duration-150 hover:text-zinc-100"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M12 4v12m0 0 4-4m-4 4-4-4" />
-            <path d="M4 19h16" />
-          </svg>
-        </a>
-      </>
+      <span className="font-mono text-xs text-zinc-300">
+        {delta <= 0 ? "−" : "+"}
+        {Math.abs(delta)}%
+      </span>
     );
   }
   if (item.status === "error") {
@@ -96,10 +76,13 @@ function Status({ item }: { item: QueueItem }) {
 type Props = {
   item: QueueItem;
   locked: boolean;
+  expanded: boolean;
+  onToggle: () => void;
   onRemove: () => void;
 };
 
-export function QueueRow({ item, locked, onRemove }: Props) {
+export function QueueRow({ item, locked, expanded, onToggle, onRemove }: Props) {
+  const [saving, setSaving] = useState(false);
   const meta = item.upload?.meta;
   const sub =
     item.status === "uploading"
@@ -111,40 +94,96 @@ export function QueueRow({ item, locked, onRemove }: Props) {
           : "";
 
   return (
-    <div className="flex items-center gap-3 py-2">
-      {item.previewUrl ? (
-        <Thumb src={item.previewUrl} />
-      ) : (
-        <div className="h-12 w-20 shrink-0 rounded-md bg-zinc-800" />
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-zinc-200">{item.name}</p>
-        <p className="truncate font-mono text-xs text-zinc-600">{sub}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <Status item={item} />
-        {!locked && (
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label="Remove file"
-            className="-m-1 p-1 text-zinc-600 transition-colors duration-150 hover:text-zinc-200"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              aria-hidden
-            >
-              <path d="M2 2l8 8M10 2l-8 8" />
-            </svg>
-          </button>
+    <div>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        className="-mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors duration-150 hover:bg-zinc-900/60"
+      >
+        {item.previewUrl ? (
+          <Thumb src={item.previewUrl} />
+        ) : (
+          <div className="h-12 w-20 shrink-0 rounded-md bg-zinc-800" />
         )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm text-zinc-200">{item.name}</p>
+          <p className="truncate font-mono text-xs text-zinc-600">{sub}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <Status item={item} />
+          {item.status === "done" && item.jobId && (
+            <button
+              type="button"
+              aria-label="Download"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSaving(true);
+              }}
+              className="text-zinc-400 transition-colors duration-150 hover:text-zinc-100"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M12 4v12m0 0 4-4m-4 4-4-4" />
+                <path d="M4 19h16" />
+              </svg>
+            </button>
+          )}
+          {!locked && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              aria-label="Remove file"
+              className="-m-1 p-1 text-zinc-600 transition-colors duration-150 hover:text-zinc-200"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <path d="M2 2l8 8M10 2l-8 8" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
+      {item.jobId && (
+        <SaveDialog
+          open={saving}
+          onOpenChange={setSaving}
+          defaultName={`${item.name.replace(/\.[^.]+$/, "")}-encoded`}
+          jobId={item.jobId}
+        />
+      )}
+      {expanded && item.previewUrl && (
+        <div className="mb-2 mt-1 overflow-hidden rounded-xl">
+          <VideoPreview key={item.previewUrl} src={item.previewUrl} />
+        </div>
+      )}
     </div>
   );
 }

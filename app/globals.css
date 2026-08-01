@@ -46,3 +46,24 @@ input[type="range"]:focus-visible {
   outline: 1px solid var(--color-zinc-500);
   outline-offset: 4px;
 }
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+}
+
+.dialog-overlay-in {
+  animation: fade-in 150ms ease-out;
+}
+
+.dialog-content-in {
+  animation: modal-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}

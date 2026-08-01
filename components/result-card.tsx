@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import type { JobStatus, UploadInfo } from "@/lib/encoder/types";
 import { formatBytes, formatDuration } from "@/lib/format";
+import { SaveDialog } from "./save-dialog";
 
 type Props = {
   job: JobStatus;
@@ -9,6 +13,7 @@ type Props = {
 };
 
 export function ResultCard({ job, upload, onAdjust, onReset }: Props) {
+  const [saving, setSaving] = useState(false);
   const outSize = job.outputSize ?? 0;
   const delta = ((outSize - upload.size) / upload.size) * 100;
 
@@ -23,12 +28,20 @@ export function ResultCard({ job, upload, onAdjust, onReset }: Props) {
         · {formatDuration(job.elapsedMs / 1000)}
       </p>
 
-      <a
-        href={`/api/jobs/${job.id}/download`}
+      <button
+        type="button"
+        onClick={() => setSaving(true)}
         className="mt-8 block w-full rounded-lg bg-zinc-100 py-3 text-center text-sm font-medium text-zinc-900 transition-colors duration-150 hover:bg-white"
       >
         Download MP4
-      </a>
+      </button>
+
+      <SaveDialog
+        open={saving}
+        onOpenChange={setSaving}
+        defaultName={`${upload.name.replace(/\.[^.]+$/, "")}-encoded`}
+        jobId={job.id}
+      />
 
       <div className="mt-4 flex justify-center gap-6">
         <button
