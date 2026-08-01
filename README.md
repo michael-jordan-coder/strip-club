@@ -3,7 +3,7 @@
 Strips the weight off videos. A local, quality-first MP4 encoder — drop a video, it leaves lighter.
 
 <p align="center">
-  <img src="public/stripclub-art.png" width="220" alt="" />
+  <img src="public/stripclub-art.gif" width="220" alt="" />
 </p>
 <p align="center"><code>142 MB → 54 MB (−62%)</code></p>
 
